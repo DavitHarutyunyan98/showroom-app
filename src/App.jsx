@@ -44,7 +44,8 @@ const INITIAL_INVENTORY = [
     bank: "",
     contract: "",
     phone: "",
-    specs: { power: "218 hp", fuel: "Gasoline" }
+    specs: { power: "218 hp", fuel: "Gasoline" },
+    images: []
   }
 ];
 
@@ -141,10 +142,12 @@ const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColum
 
 const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
   const fileInputRef = useRef(null);
+  const docxInputRef = useRef(null);
   const [formData, setFormData] = useState({
     orderNo: '', year: 2025, status: 'Showroom', make: 'BMW', model: '',
     optionType: '', color: '', info: '', price: '', vin: '',
     buyer: '', manager: '', bank: '', contract: '', phone: '',
+    images: [],
   });
 
   React.useEffect(() => {
@@ -153,6 +156,7 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
         orderNo: '', year: 2025, status: 'Showroom', make: 'BMW', model: '',
         optionType: '', color: '', info: '', price: '', vin: '',
         buyer: '', manager: '', bank: '', contract: '', phone: '',
+        images: [],
       };
       const fullData = { ...base };
       columns.forEach(col => { if (!(col.id in fullData)) fullData[col.id] = ''; });
@@ -233,6 +237,70 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
     event.target.value = ''; 
   };
 
+  const handleDocxUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      // Load mammoth.js dynamically
+      const script = document.createElement('script');
+      script.src = "https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js";
+      document.head.appendChild(script);
+
+      script.onload = () => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const arrayBuffer = e.target.result;
+          
+          try {
+            const result = await window.mammoth.extractRawText({ arrayBuffer });
+            const images = await window.mammoth.images.imgElement(arrayBuffer);
+            
+            // Extract images from the DOCX
+            const imagePromises = [];
+            const imageElements = [];
+            
+            // Parse images using mammoth's convertToHtml with custom image handler
+            await window.mammoth.convertToHtml(
+              { arrayBuffer },
+              {
+                convertImage: window.mammoth.images.imgElement(function(image) {
+                  return image.read("base64").then(function(imageBuffer) {
+                    imageElements.push({
+                      src: "data:" + image.contentType + ";base64," + imageBuffer,
+                      contentType: image.contentType
+                    });
+                    return { src: "data:" + image.contentType + ";base64," + imageBuffer };
+                  });
+                })
+              }
+            );
+
+            if (imageElements.length > 0) {
+              setFormData(prev => ({
+                ...prev,
+                images: [...(prev.images || []), ...imageElements]
+              }));
+            }
+          } catch (err) {
+            console.error("Error extracting images from DOCX:", err);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      };
+    } catch (err) {
+      console.error("Error loading or processing DOCX file:", err);
+    }
+    event.target.value = '';
+  };
+
+  const removeImage = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -245,11 +313,18 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
           </div>
           <div className="flex items-center gap-4">
             <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls,.csv" onChange={handleFileUpload} />
+            <input type="file" ref={docxInputRef} className="hidden" accept=".docx" onChange={handleDocxUpload} />
             <button 
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg"
             >
               <FileUp size={18} /> Import Spec XLSX
+            </button>
+            <button 
+              onClick={() => docxInputRef.current?.click()}
+              className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-2xl font-bold text-sm hover:bg-purple-700 transition-all shadow-lg"
+            >
+              <FileUp size={18} /> Import Images DOCX
             </button>
             <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200"><X size={20} /></button>
           </div>
@@ -262,6 +337,25 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
             <InputField label="Model" value={formData.model} onChange={v => setFormData({...formData, model: v})} />
             <InputField label="VIN" value={formData.vin} onChange={v => setFormData({...formData, vin: v})} />
             <InputField label="Year" value={formData.year} onChange={v => setFormData({...formData, year: v})} />
+            
+            {formData.images && formData.images.length > 0 && (
+              <div className="pt-4">
+                <h3 className="font-bold text-purple-600 text-[10px] uppercase tracking-widest border-b pb-2 mb-3">Vehicle Images ({formData.images.length})</h3>
+                <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                  {formData.images.map((img, idx) => (
+                    <div key={idx} className="relative group">
+                      <img src={img.src} alt={`Car ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-slate-200" />
+                      <button 
+                        onClick={() => removeImage(idx)}
+                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="space-y-4">
