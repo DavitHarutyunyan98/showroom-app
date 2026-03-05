@@ -22,9 +22,7 @@ import {
   Type,
   PlusCircle,
   FileUp,
-  ClipboardList,
-  Image as ImageIcon,
-  Loader2
+  ClipboardList
 } from 'lucide-react';
 
 // --- Enhanced Initial Data ---
@@ -46,13 +44,11 @@ const INITIAL_INVENTORY = [
     bank: "",
     contract: "",
     phone: "",
-    images: [],
     specs: { power: "218 hp", fuel: "Gasoline" }
   }
 ];
 
 const COLUMN_DEFINITIONS = [
-  { id: 'images', label: 'Photo', visible: true, isFixed: true },
   { id: 'orderNo', label: 'Order #', visible: true, isFixed: true },
   { id: 'year', label: 'Year', visible: true, isFixed: true },
   { id: 'status', label: 'Status', visible: true },
@@ -145,13 +141,10 @@ const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColum
 
 const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
   const fileInputRef = useRef(null);
-  const docxInputRef = useRef(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
     orderNo: '', year: 2025, status: 'Showroom', make: 'BMW', model: '',
     optionType: '', color: '', info: '', price: '', vin: '',
     buyer: '', manager: '', bank: '', contract: '', phone: '',
-    images: []
   });
 
   React.useEffect(() => {
@@ -160,7 +153,6 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
         orderNo: '', year: 2025, status: 'Showroom', make: 'BMW', model: '',
         optionType: '', color: '', info: '', price: '', vin: '',
         buyer: '', manager: '', bank: '', contract: '', phone: '',
-        images: []
       };
       const fullData = { ...base };
       columns.forEach(col => { if (!(col.id in fullData)) fullData[col.id] = ''; });
@@ -173,6 +165,7 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
     if (!file) return;
 
     try {
+      // We load the XLSX library dynamically
       const script = document.createElement('script');
       script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
       document.head.appendChild(script);
@@ -182,35 +175,54 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
         reader.onload = (e) => {
           const data = new Uint8Array(e.target.result);
           const workbook = window.XLSX.read(data, { type: 'array' });
+          
+          // Get the first sheet
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
+          
+          // Convert to JSON (array of arrays)
           const rows = window.XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           
           let parsedOptions = [];
           let currentSection = "";
+
           const skipKeywords = ['options', 'basic equipment', 'optional equipment', 'upholstery', 'external color', 'packages', 'steering', 'seats', 'lights', 'internal options', 'general options', 'finishers', 'extra options', 'm'];
 
           rows.forEach(cols => {
             if (!cols || cols.length === 0) return;
+
             const col1 = String(cols[0] || '').trim();
             const col2 = String(cols[1] || '').trim();
+
             if (!col1) return;
 
+            // Header Detection: Col1 has text, Col2 is empty or invalid
             const isHeader = col1 && (!col2 || col2 === "" || col2 === "˅");
             if (isHeader) {
                 const cleanHeader = col1.trim();
-                if (cleanHeader && isNaN(cleanHeader)) currentSection = cleanHeader;
+                // If it's just a number, it's likely a basic equipment item, not a section header
+                if (cleanHeader && isNaN(cleanHeader)) {
+                    currentSection = cleanHeader;
+                }
             }
 
+            // Option detection
             const isSkipWord = skipKeywords.includes(col1.toLowerCase());
+            
+            // If col1 has content, col2 has content, and col1 isn't a skip word
             if (!isSkipWord && col2 && col2 !== '˅') {
-                const optionString = currentSection ? `[${currentSection}] ${col1}: ${col2}` : `${col1}: ${col2}`;
+                const optionString = currentSection 
+                    ? `[${currentSection}] ${col1}: ${col2}`
+                    : `${col1}: ${col2}`;
                 parsedOptions.push(optionString);
             }
           });
 
           if (parsedOptions.length > 0) {
-            setFormData(prev => ({ ...prev, info: parsedOptions.join('\n') }));
+            setFormData(prev => ({
+              ...prev,
+              info: parsedOptions.join('\n')
+            }));
           }
         };
         reader.readAsArrayBuffer(file);
@@ -221,57 +233,6 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
     event.target.value = ''; 
   };
 
-  const handleDocxUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    setIsProcessing(true);
-
-    try {
-      // Load mammoth for DOCX image extraction
-      if (!window.mammoth) {
-        const script = document.createElement('script');
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";
-        document.head.appendChild(script);
-        await new Promise(resolve => script.onload = resolve);
-      }
-
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const arrayBuffer = e.target.result;
-        
-        // mammoth extracts images as base64 in the HTML conversion
-        const result = await window.mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-        const html = result.value;
-        
-        // Extract all src from img tags
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const imgElements = doc.querySelectorAll('img');
-        const base64Images = Array.from(imgElements).map(img => img.src);
-
-        if (base64Images.length > 0) {
-          setFormData(prev => ({
-            ...prev,
-            images: [...(prev.images || []), ...base64Images]
-          }));
-        }
-        setIsProcessing(false);
-      };
-      reader.readAsArrayBuffer(file);
-    } catch (err) {
-      console.error("Error processing DOCX file:", err);
-      setIsProcessing(false);
-    }
-    event.target.value = '';
-  };
-
-  const removeImage = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -280,21 +241,10 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-2xl font-black text-slate-900">{initialData ? 'Edit Record' : 'Add New Entry'}</h2>
-            <p className="text-slate-400 text-sm">Upload Excel for specs and Word (.docx) for car photos.</p>
+            <p className="text-slate-400 text-sm">Upload an Excel (.xlsx) file to fill the options list automatically.</p>
           </div>
           <div className="flex items-center gap-4">
             <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls,.csv" onChange={handleFileUpload} />
-            <input type="file" ref={docxInputRef} className="hidden" accept=".docx" onChange={handleDocxUpload} />
-            
-            <button 
-              onClick={() => docxInputRef.current?.click()}
-              disabled={isProcessing}
-              className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-2xl font-bold text-sm hover:bg-purple-700 transition-all shadow-lg disabled:opacity-50"
-            >
-              {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <ImageIcon size={18} />} 
-              {isProcessing ? 'Extracting...' : 'Import Photos (.docx)'}
-            </button>
-
             <button 
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg"
@@ -304,23 +254,6 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
             <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200"><X size={20} /></button>
           </div>
         </div>
-
-        {/* Image Preview Strip */}
-        {formData.images && formData.images.length > 0 && (
-          <div className="flex gap-4 overflow-x-auto pb-6 mb-6 border-b border-slate-100">
-            {formData.images.map((img, idx) => (
-              <div key={idx} className="relative shrink-0 group">
-                <img src={img} className="h-32 w-48 object-cover rounded-2xl border border-slate-200 shadow-sm" alt="Car preview" />
-                <button 
-                  onClick={() => removeImage(idx)}
-                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-md"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-4">
@@ -451,19 +384,7 @@ const App = () => {
                 <tr key={car.id} className="hover:bg-blue-50/30 transition-colors">
                   {columns.filter(c => c.visible).map(col => (
                     <td key={col.id} className="p-4 text-sm max-w-[200px] truncate">
-                      {col.id === 'images' ? (
-                        <div className="w-16 h-10 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
-                          {car.images && car.images.length > 0 ? (
-                            <img src={car.images[0]} className="w-full h-full object-cover" alt="car" />
-                          ) : (
-                            <ImageIcon size={14} className="text-slate-300" />
-                          )}
-                        </div>
-                      ) : col.id === 'price' ? (
-                        Number(car[col.id]).toLocaleString()
-                      ) : (
-                        car[col.id] || '-'
-                      )}
+                      {col.id === 'price' ? Number(car[col.id]).toLocaleString() : car[col.id] || '-'}
                     </td>
                   ))}
                   <td className="p-4">
