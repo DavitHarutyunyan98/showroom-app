@@ -228,31 +228,42 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target.result;
-      const lines = text.split('\n');
+      const lines = text.split(/\r?\n/);
       
       const seenCodes = new Set();
       const optionsArray = [];
+      let currentCategory = "";
 
       lines.forEach(line => {
-        // Handle potential CSV quoting and split
+        if (!line.trim()) return;
+
+        // Split by comma, but handle quoted strings correctly
         const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
         
+        // Identify Category Headers (lines with text but no code in first column)
+        // In the spec file, categories often look like "Optional equipment,,," or "Steering,,,"
+        if (parts.length >= 1 && parts[0] && !parts[1] && !/^[A-Z0-9]+$/.test(parts[0])) {
+          currentCategory = parts[0];
+          return;
+        }
+
+        // Logic for identifying Option Codes (e.g., 2TB, 337, KPHF, or 1, 2, 3)
         if (parts.length >= 2) {
           const code = parts[0];
           const description = parts[1];
           
-          // BMW/MINI Option Code Pattern: 
-          // Usually 3 alphanumeric characters (e.g. 337, 4UR, KPHF)
-          // or simple numbers for basic equipment (1, 2, 3...)
-          const isAlphaNumeric = /^[a-zA-Z0-9]+$/.test(code);
-          const isValidCode = code.length >= 1 && code.length <= 4 && isAlphaNumeric;
+          // Check if code is valid (Alphanumeric, usually 1-4 chars)
+          const isValidCode = /^[a-zA-Z0-9]+$/.test(code) && code.length >= 1 && code.length <= 5;
           
-          if (isValidCode && description && !seenCodes.has(code)) {
-            // Exclude common headers that might look like codes
-            const headers = ['code', 'options', 'model', 'year'];
-            if (!headers.includes(code.toLowerCase())) {
+          if (isValidCode && description && description !== '˅' && !seenCodes.has(code)) {
+            // Filter out common header words
+            const blacklist = ['code', 'options', 'model', 'year', 'basic', 'optional', 'equipment'];
+            if (!blacklist.includes(code.toLowerCase())) {
               seenCodes.add(code);
-              optionsArray.push(`${code}: ${description}`);
+              const entry = currentCategory 
+                ? `[${currentCategory}] ${code}: ${description}`
+                : `${code}: ${description}`;
+              optionsArray.push(entry);
             }
           }
         }
@@ -262,14 +273,11 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
         const formattedSpecs = optionsArray.join('\n');
         setFormData(prev => ({
           ...prev,
-          info: prev.info 
-            ? `${prev.info}\n\n--- IMPORTED OPTIONS ---\n${formattedSpecs}` 
-            : `--- IMPORTED OPTIONS ---\n${formattedSpecs}`
+          info: formattedSpecs // Set directly to replace or append as preferred
         }));
       }
     };
     reader.readAsText(file);
-    // Reset file input so same file can be uploaded again if needed
     event.target.value = '';
   };
 
