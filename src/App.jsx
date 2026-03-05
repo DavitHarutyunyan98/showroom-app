@@ -18,7 +18,8 @@ import {
   Download,
   Eye,
   EyeOff,
-  Check
+  Check,
+  Type
 } from 'lucide-react';
 
 // --- Enhanced Initial Data to match Spreadsheet ---
@@ -101,8 +102,22 @@ const COLUMN_DEFINITIONS = [
 
 // --- Components ---
 
-const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn }) => {
+const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColumn }) => {
+  const [editingId, setEditingId] = useState(null);
+  const [tempName, setTempName] = useState("");
+
   if (!isOpen) return null;
+
+  const startEditing = (col) => {
+    setEditingId(col.id);
+    setTempName(col.label);
+  };
+
+  const saveName = (id) => {
+    renameColumn(id, tempName);
+    setEditingId(null);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[110] flex items-center justify-center p-4">
       <div className="bg-white w-full max-w-md rounded-[32px] p-8 shadow-2xl">
@@ -112,14 +127,43 @@ const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn }) => {
         </div>
         <div className="grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto pr-2">
           {columns.map(col => (
-            <button 
+            <div 
               key={col.id}
-              onClick={() => toggleColumn(col.id)}
-              className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${col.visible ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-100 text-slate-400 opacity-60'}`}
+              className={`flex items-center gap-2 p-2 rounded-2xl border transition-all ${col.visible ? 'border-blue-100 bg-blue-50/50' : 'border-slate-50 bg-white opacity-60'}`}
             >
-              <span className="font-bold text-sm">{col.label}</span>
-              {col.visible ? <Eye size={16} /> : <EyeOff size={16} />}
-            </button>
+              {editingId === col.id ? (
+                <div className="flex-1 flex gap-2">
+                  <input 
+                    autoFocus
+                    className="flex-1 bg-white border border-blue-300 rounded-xl px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && saveName(col.id)}
+                  />
+                  <button onClick={() => saveName(col.id)} className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
+                    <Check size={14} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => toggleColumn(col.id)}
+                    className="flex-1 flex items-center justify-between px-2 py-1"
+                  >
+                    <span className={`font-bold text-sm ${col.visible ? 'text-blue-700' : 'text-slate-400'}`}>
+                      {col.label}
+                    </span>
+                    {col.visible ? <Eye size={16} className="text-blue-600" /> : <EyeOff size={16} className="text-slate-300" />}
+                  </button>
+                  <button 
+                    onClick={() => startEditing(col)}
+                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-colors"
+                  >
+                    <Type size={14} />
+                  </button>
+                </>
+              )}
+            </div>
           ))}
         </div>
         <button 
@@ -217,6 +261,12 @@ const App = () => {
   const toggleColumn = (id) => {
     setColumns(prev => prev.map(col => 
       col.id === id ? { ...col, visible: !col.visible } : col
+    ));
+  };
+
+  const renameColumn = (id, newLabel) => {
+    setColumns(prev => prev.map(col => 
+      col.id === id ? { ...col, label: newLabel } : col
     ));
   };
 
@@ -389,6 +439,7 @@ const App = () => {
         onClose={() => setIsConfigOpen(false)}
         columns={columns}
         toggleColumn={toggleColumn}
+        renameColumn={renameColumn}
       />
     </div>
   );
