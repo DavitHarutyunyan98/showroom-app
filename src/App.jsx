@@ -172,31 +172,38 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
       let parsedOptions = [];
       let currentSection = "";
 
+      // Known non-option keywords that appear in col 1
+      const skipKeywords = ['options', 'basic equipment', 'optional equipment', 'upholstery', 'external color', 'packages', 'steering', 'seats', 'lights', 'internal options', 'general options', 'finishers', 'extra options', 'm'];
+
       lines.forEach(line => {
-        // Split by comma, trimming whitespace and quotes
-        const columns = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        if (!line.trim()) return;
+
+        // Use a CSV-aware split to handle quotes (e.g., "Seat adjustment, electric...")
+        const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+                         .map(c => c.trim().replace(/^"|"$/g, ''));
         
-        // Skip empty lines
-        if (columns.filter(c => c).length === 0) return;
+        const col1 = cols[0];
+        const col2 = cols[1];
 
-        const col1 = columns[0];
-        const col2 = columns[1];
+        if (!col1) return;
 
-        // 1. Detect Section Headers (e.g., "Basic equipment", "Optional equipment", "Steering")
-        // These rows usually have text in col1 but nothing in col2, col3...
-        if (col1 && !col2 && !columns[2]) {
-            currentSection = col1;
+        // Is this a section header? (Col1 has text, Col2 is empty or just commas follow)
+        const isHeader = col1 && (!col2 || col2 === "");
+        if (isHeader) {
+            const cleanHeader = col1.trim();
+            if (cleanHeader) currentSection = cleanHeader;
             return;
         }
 
-        // 2. Detect Option Codes (e.g., "2TB", "337", "475" or "1", "2", "3")
-        // Rule: Col1 is a code (letters/numbers, no spaces), Col2 is the description
-        const isCode = /^[a-zA-Z0-9]+$/.test(col1);
-        if (isCode && col2 && col2 !== '˅') {
-            const entry = currentSection 
-                ? `${col1}: ${col2} (${currentSection})`
+        // Is this an option row?
+        // Logic: Col 1 has something that isn't a known generic header word, and Col 2 has the description
+        const isSkipWord = skipKeywords.includes(col1.toLowerCase());
+        
+        if (!isSkipWord && col2 && col2 !== '˅') {
+            const optionString = currentSection 
+                ? `[${currentSection}] ${col1}: ${col2}`
                 : `${col1}: ${col2}`;
-            parsedOptions.push(entry);
+            parsedOptions.push(optionString);
         }
       });
 
@@ -208,7 +215,7 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
       }
     };
     reader.readAsText(file);
-    event.target.value = ''; // Reset input
+    event.target.value = ''; 
   };
 
   if (!isOpen) return null;
@@ -219,15 +226,15 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-2xl font-black text-slate-900">{initialData ? 'Edit Record' : 'Add New Entry'}</h2>
-            <p className="text-slate-400 text-sm">Select a file to automatically populate "Production Info"</p>
+            <p className="text-slate-400 text-sm">Upload a CSV/Text file to fill the options list automatically.</p>
           </div>
           <div className="flex items-center gap-4">
             <input type="file" ref={fileInputRef} className="hidden" accept=".csv,.txt" onChange={handleFileUpload} />
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg"
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg"
             >
-              <FileUp size={18} /> Select Spec File
+              <FileUp size={18} /> Import Spec CSV
             </button>
             <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200"><X size={20} /></button>
           </div>
@@ -246,10 +253,10 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
             <h3 className="font-bold text-blue-600 text-[10px] uppercase tracking-widest border-b pb-2">Production Info (Auto-filled)</h3>
             <div className="relative">
               <textarea 
-                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-[13px] h-80 font-mono leading-relaxed"
+                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-[12px] h-80 font-mono leading-relaxed"
                 value={formData.info}
                 onChange={e => setFormData({...formData, info: e.target.value})}
-                placeholder="Options from file will appear here..."
+                placeholder="Imported options will appear here..."
               />
             </div>
           </div>
