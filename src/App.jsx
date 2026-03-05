@@ -160,61 +160,76 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
     }
   }, [isOpen, columns, initialData]);
 
-  const handleFileUpload = (event) => {
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target.result;
-      const lines = text.split(/\r?\n/);
-      
-      let parsedOptions = [];
-      let currentSection = "";
+    try {
+      // We load the XLSX library dynamically
+      const script = document.createElement('script');
+      script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
+      document.head.appendChild(script);
 
-      // Known non-option keywords that appear in col 1
-      const skipKeywords = ['options', 'basic equipment', 'optional equipment', 'upholstery', 'external color', 'packages', 'steering', 'seats', 'lights', 'internal options', 'general options', 'finishers', 'extra options', 'm'];
+      script.onload = () => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const data = new Uint8Array(e.target.result);
+          const workbook = window.XLSX.read(data, { type: 'array' });
+          
+          // Get the first sheet
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          
+          // Convert to JSON (array of arrays)
+          const rows = window.XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          
+          let parsedOptions = [];
+          let currentSection = "";
 
-      lines.forEach(line => {
-        if (!line.trim()) return;
+          const skipKeywords = ['options', 'basic equipment', 'optional equipment', 'upholstery', 'external color', 'packages', 'steering', 'seats', 'lights', 'internal options', 'general options', 'finishers', 'extra options', 'm'];
 
-        // Use a CSV-aware split to handle quotes (e.g., "Seat adjustment, electric...")
-        const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-                         .map(c => c.trim().replace(/^"|"$/g, ''));
-        
-        const col1 = cols[0];
-        const col2 = cols[1];
+          rows.forEach(cols => {
+            if (!cols || cols.length === 0) return;
 
-        if (!col1) return;
+            const col1 = String(cols[0] || '').trim();
+            const col2 = String(cols[1] || '').trim();
 
-        // Is this a section header? (Col1 has text, Col2 is empty or just commas follow)
-        const isHeader = col1 && (!col2 || col2 === "");
-        if (isHeader) {
-            const cleanHeader = col1.trim();
-            if (cleanHeader) currentSection = cleanHeader;
-            return;
-        }
+            if (!col1) return;
 
-        // Is this an option row?
-        // Logic: Col 1 has something that isn't a known generic header word, and Col 2 has the description
-        const isSkipWord = skipKeywords.includes(col1.toLowerCase());
-        
-        if (!isSkipWord && col2 && col2 !== '˅') {
-            const optionString = currentSection 
-                ? `[${currentSection}] ${col1}: ${col2}`
-                : `${col1}: ${col2}`;
-            parsedOptions.push(optionString);
-        }
-      });
+            // Header Detection: Col1 has text, Col2 is empty or invalid
+            const isHeader = col1 && (!col2 || col2 === "" || col2 === "˅");
+            if (isHeader) {
+                const cleanHeader = col1.trim();
+                // If it's just a number, it's likely a basic equipment item, not a section header
+                if (cleanHeader && isNaN(cleanHeader)) {
+                    currentSection = cleanHeader;
+                }
+            }
 
-      if (parsedOptions.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          info: parsedOptions.join('\n')
-        }));
-      }
-    };
-    reader.readAsText(file);
+            // Option detection
+            const isSkipWord = skipKeywords.includes(col1.toLowerCase());
+            
+            // If col1 has content, col2 has content, and col1 isn't a skip word
+            if (!isSkipWord && col2 && col2 !== '˅') {
+                const optionString = currentSection 
+                    ? `[${currentSection}] ${col1}: ${col2}`
+                    : `${col1}: ${col2}`;
+                parsedOptions.push(optionString);
+            }
+          });
+
+          if (parsedOptions.length > 0) {
+            setFormData(prev => ({
+              ...prev,
+              info: parsedOptions.join('\n')
+            }));
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      };
+    } catch (err) {
+      console.error("Error loading or processing Excel file:", err);
+    }
     event.target.value = ''; 
   };
 
@@ -226,15 +241,15 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-2xl font-black text-slate-900">{initialData ? 'Edit Record' : 'Add New Entry'}</h2>
-            <p className="text-slate-400 text-sm">Upload a CSV/Text file to fill the options list automatically.</p>
+            <p className="text-slate-400 text-sm">Upload an Excel (.xlsx) file to fill the options list automatically.</p>
           </div>
           <div className="flex items-center gap-4">
-            <input type="file" ref={fileInputRef} className="hidden" accept=".csv,.txt" onChange={handleFileUpload} />
+            <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls,.csv" onChange={handleFileUpload} />
             <button 
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg"
             >
-              <FileUp size={18} /> Import Spec CSV
+              <FileUp size={18} /> Import Spec XLSX
             </button>
             <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200"><X size={20} /></button>
           </div>
