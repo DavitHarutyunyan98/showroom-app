@@ -25,7 +25,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 
-// --- Enhanced Initial Data to match Spreadsheet ---
+// --- Enhanced Initial Data ---
 const INITIAL_INVENTORY = [
   {
     id: 1,
@@ -36,7 +36,7 @@ const INITIAL_INVENTORY = [
     model: "MINI Countryman S ALL4",
     optionType: "JCW Trim",
     color: "Nanuq White Black",
-    info: "5. May production 2025",
+    info: "Import options to see specs here",
     price: 37000000,
     vin: "WMW21GA03S 7738304",
     buyer: "",
@@ -44,25 +44,6 @@ const INITIAL_INVENTORY = [
     bank: "",
     contract: "",
     phone: "",
-    specs: { power: "218 hp", fuel: "Gasoline" }
-  },
-  {
-    id: 2,
-    orderNo: "0983872",
-    year: 2025,
-    status: "Showroom",
-    make: "BMW",
-    model: "MINI Countryman S ALL4",
-    optionType: "Favoured Trim",
-    color: "Melting Silver Dark Petrol",
-    info: "5. May production 2025",
-    price: 36000000,
-    vin: "WMW21GA04S 7T39848",
-    buyer: "Liza",
-    manager: "07.01.1961",
-    bank: "N 335",
-    contract: "055 46 49 41",
-    phone: "lizalat@hotmail.com",
     specs: { power: "218 hp", fuel: "Gasoline" }
   }
 ];
@@ -83,8 +64,6 @@ const COLUMN_DEFINITIONS = [
   { id: 'phone', label: 'Phone', visible: false },
   { id: 'vin', label: 'VIN', visible: true },
 ];
-
-// --- Components ---
 
 const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColumn, addColumn, deleteColumn }) => {
   const [editingId, setEditingId] = useState(null);
@@ -126,71 +105,35 @@ const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColum
             onChange={(e) => setNewColName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           />
-          <button 
-            onClick={handleAdd}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-blue-700 transition-colors"
-          >
+          <button onClick={handleAdd} className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2">
             <Plus size={14} /> Add
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto pr-2 space-y-2">
           {columns.map(col => (
-            <div 
-              key={col.id}
-              className={`flex items-center gap-2 p-2 rounded-2xl border transition-all ${col.visible ? 'border-blue-100 bg-blue-50/50' : 'border-slate-50 bg-white opacity-60'}`}
-            >
+            <div key={col.id} className={`flex items-center gap-2 p-2 rounded-2xl border transition-all ${col.visible ? 'border-blue-100 bg-blue-50/50' : 'border-slate-50 bg-white opacity-60'}`}>
               {editingId === col.id ? (
                 <div className="flex-1 flex gap-2">
-                  <input 
-                    autoFocus
-                    className="flex-1 bg-white border border-blue-300 rounded-xl px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                    value={tempName}
-                    onChange={(e) => setTempName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && saveName(col.id)}
-                  />
-                  <button onClick={() => saveName(col.id)} className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
-                    <Check size={14} />
-                  </button>
+                  <input autoFocus className="flex-1 bg-white border border-blue-300 rounded-xl px-3 py-1 text-sm outline-none" value={tempName} onChange={(e) => setTempName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveName(col.id)} />
+                  <button onClick={() => saveName(col.id)} className="p-2 bg-blue-600 text-white rounded-xl"><Check size={14} /></button>
                 </div>
               ) : (
                 <>
-                  <button 
-                    onClick={() => toggleColumn(col.id)}
-                    className="flex-1 flex items-center justify-between px-2 py-1"
-                  >
-                    <span className={`font-bold text-sm ${col.visible ? 'text-blue-700' : 'text-slate-400'}`}>
-                      {col.label}
-                    </span>
+                  <button onClick={() => toggleColumn(col.id)} className="flex-1 flex items-center justify-between px-2 py-1">
+                    <span className={`font-bold text-sm ${col.visible ? 'text-blue-700' : 'text-slate-400'}`}>{col.label}</span>
                     {col.visible ? <Eye size={16} className="text-blue-600" /> : <EyeOff size={16} className="text-slate-300" />}
                   </button>
                   <div className="flex gap-1">
-                    <button 
-                      onClick={() => startEditing(col)}
-                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-colors"
-                    >
-                      <Type size={14} />
-                    </button>
-                    {!col.isFixed && (
-                      <button 
-                        onClick={() => deleteColumn(col.id)}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-xl transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+                    <button onClick={() => startEditing(col)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl"><Type size={14} /></button>
+                    {!col.isFixed && <button onClick={() => deleteColumn(col.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-xl"><Trash2 size={14} /></button>}
                   </div>
                 </>
               )}
             </div>
           ))}
         </div>
-        <button 
-          onClick={onClose}
-          className="w-full mt-6 bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-colors shrink-0"
-        >
-          Done
-        </button>
+        <button onClick={onClose} className="w-full mt-6 bg-slate-900 text-white py-4 rounded-2xl font-bold shrink-0">Done</button>
       </div>
     </div>
   );
@@ -198,26 +141,22 @@ const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColum
 
 const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
   const fileInputRef = useRef(null);
-  const [formData, setFormData] = useState(initialData || {
+  const [formData, setFormData] = useState({
     orderNo: '', year: 2025, status: 'Showroom', make: 'BMW', model: '',
     optionType: '', color: '', info: '', price: '', vin: '',
     buyer: '', manager: '', bank: '', contract: '', phone: '',
-    specs: { power: '', fuel: 'Gasoline' }
   });
 
   React.useEffect(() => {
     if (isOpen) {
-      const updatedData = initialData ? { ...initialData } : {
+      const base = initialData || {
         orderNo: '', year: 2025, status: 'Showroom', make: 'BMW', model: '',
         optionType: '', color: '', info: '', price: '', vin: '',
         buyer: '', manager: '', bank: '', contract: '', phone: '',
-        specs: { power: '', fuel: 'Gasoline' }
       };
-      
-      columns.forEach(col => {
-        if (!(col.id in updatedData)) updatedData[col.id] = '';
-      });
-      setFormData(updatedData);
+      const fullData = { ...base };
+      columns.forEach(col => { if (!(col.id in fullData)) fullData[col.id] = ''; });
+      setFormData(fullData);
     }
   }, [isOpen, columns, initialData]);
 
@@ -230,69 +169,49 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
       const text = e.target.result;
       const lines = text.split(/\r?\n/);
       
-      const seenCodes = new Set();
-      const optionsArray = [];
-      let currentCategory = "";
+      let parsedOptions = [];
+      let currentSection = "";
 
       lines.forEach(line => {
-        if (!line.trim()) return;
-
-        // Split by comma, but handle quoted strings correctly
-        const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+        // Split by comma, trimming whitespace and quotes
+        const columns = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
         
-        // Identify Category Headers (lines with text but no code in first column)
-        // In the spec file, categories often look like "Optional equipment,,," or "Steering,,,"
-        if (parts.length >= 1 && parts[0] && !parts[1] && !/^[A-Z0-9]+$/.test(parts[0])) {
-          currentCategory = parts[0];
-          return;
+        // Skip empty lines
+        if (columns.filter(c => c).length === 0) return;
+
+        const col1 = columns[0];
+        const col2 = columns[1];
+
+        // 1. Detect Section Headers (e.g., "Basic equipment", "Optional equipment", "Steering")
+        // These rows usually have text in col1 but nothing in col2, col3...
+        if (col1 && !col2 && !columns[2]) {
+            currentSection = col1;
+            return;
         }
 
-        // Logic for identifying Option Codes (e.g., 2TB, 337, KPHF, or 1, 2, 3)
-        if (parts.length >= 2) {
-          const code = parts[0];
-          const description = parts[1];
-          
-          // Check if code is valid (Alphanumeric, usually 1-4 chars)
-          const isValidCode = /^[a-zA-Z0-9]+$/.test(code) && code.length >= 1 && code.length <= 5;
-          
-          if (isValidCode && description && description !== '˅' && !seenCodes.has(code)) {
-            // Filter out common header words
-            const blacklist = ['code', 'options', 'model', 'year', 'basic', 'optional', 'equipment'];
-            if (!blacklist.includes(code.toLowerCase())) {
-              seenCodes.add(code);
-              const entry = currentCategory 
-                ? `[${currentCategory}] ${code}: ${description}`
-                : `${code}: ${description}`;
-              optionsArray.push(entry);
-            }
-          }
+        // 2. Detect Option Codes (e.g., "2TB", "337", "475" or "1", "2", "3")
+        // Rule: Col1 is a code (letters/numbers, no spaces), Col2 is the description
+        const isCode = /^[a-zA-Z0-9]+$/.test(col1);
+        if (isCode && col2 && col2 !== '˅') {
+            const entry = currentSection 
+                ? `${col1}: ${col2} (${currentSection})`
+                : `${col1}: ${col2}`;
+            parsedOptions.push(entry);
         }
       });
 
-      if (optionsArray.length > 0) {
-        const formattedSpecs = optionsArray.join('\n');
+      if (parsedOptions.length > 0) {
         setFormData(prev => ({
           ...prev,
-          info: formattedSpecs // Set directly to replace or append as preferred
+          info: parsedOptions.join('\n')
         }));
       }
     };
     reader.readAsText(file);
-    event.target.value = '';
+    event.target.value = ''; // Reset input
   };
 
   if (!isOpen) return null;
-
-  const idGroups = {
-    identity: ['orderNo', 'year', 'model', 'vin'],
-    config: ['optionType', 'color', 'info', 'price'],
-    sales: ['buyer', 'manager', 'bank', 'contract', 'phone']
-  };
-
-  const getCustomFields = () => {
-    const coreIds = [...idGroups.identity, ...idGroups.config, ...idGroups.sales];
-    return columns.filter(col => !coreIds.includes(col.id));
-  };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
@@ -300,99 +219,69 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-2xl font-black text-slate-900">{initialData ? 'Edit Record' : 'Add New Entry'}</h2>
-            <p className="text-slate-400 text-sm">Fill in details or import options from spec sheet</p>
+            <p className="text-slate-400 text-sm">Select a file to automatically populate "Production Info"</p>
           </div>
           <div className="flex items-center gap-4">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept=".csv,.xlsx,.txt" 
-              onChange={handleFileUpload} 
-            />
+            <input type="file" ref={fileInputRef} className="hidden" accept=".csv,.txt" onChange={handleFileUpload} />
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+              className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg"
             >
-              <FileUp size={18} /> Import Options (.xlsx/csv)
+              <FileUp size={18} /> Select Spec File
             </button>
-            <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"><X size={20} /></button>
+            <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200"><X size={20} /></button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-4">
-            <h3 className="font-bold text-blue-600 text-sm uppercase tracking-wider border-b border-blue-100 pb-2 flex items-center gap-2">
-               Identity
-            </h3>
-            {idGroups.identity.map(id => {
-              const col = columns.find(c => c.id === id);
-              return col ? <InputField key={id} label={col.label} value={formData[id]} onChange={v => setFormData({...formData, [id]: v})} /> : null;
-            })}
+            <h3 className="font-bold text-blue-600 text-[10px] uppercase tracking-widest border-b pb-2">Identity</h3>
+            <InputField label="Order #" value={formData.orderNo} onChange={v => setFormData({...formData, orderNo: v})} />
+            <InputField label="Model" value={formData.model} onChange={v => setFormData({...formData, model: v})} />
+            <InputField label="VIN" value={formData.vin} onChange={v => setFormData({...formData, vin: v})} />
+            <InputField label="Year" value={formData.year} onChange={v => setFormData({...formData, year: v})} />
           </div>
           
-          <div className="space-y-4 md:col-span-1">
-            <h3 className="font-bold text-blue-600 text-sm uppercase tracking-wider border-b border-blue-100 pb-2">Configuration</h3>
-            {idGroups.config.map(id => {
-              const col = columns.find(c => c.id === id);
-              if (!col) return null;
-              if (id === 'info') {
-                return (
-                  <div key={id} className="relative">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">{col.label}</label>
-                    <textarea 
-                      className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm h-48 font-mono resize-none leading-relaxed"
-                      value={formData[id]}
-                      onChange={e => setFormData({...formData, [id]: e.target.value})}
-                      placeholder="Import options from file to fill this area automatically..."
-                    />
-                  </div>
-                );
-              }
-              return <InputField key={id} label={col.label} value={formData[id]} onChange={v => setFormData({...formData, [id]: v})} />;
-            })}
+          <div className="space-y-4">
+            <h3 className="font-bold text-blue-600 text-[10px] uppercase tracking-widest border-b pb-2">Production Info (Auto-filled)</h3>
+            <div className="relative">
+              <textarea 
+                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-[13px] h-80 font-mono leading-relaxed"
+                value={formData.info}
+                onChange={e => setFormData({...formData, info: e.target.value})}
+                placeholder="Options from file will appear here..."
+              />
+            </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-bold text-blue-600 text-sm uppercase tracking-wider border-b border-blue-100 pb-2">Customer</h3>
-            {idGroups.sales.map(id => {
-              const col = columns.find(c => c.id === id);
-              return col ? <InputField key={id} label={col.label} value={formData[id]} onChange={v => setFormData({...formData, [id]: v})} /> : null;
-            })}
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="font-bold text-purple-600 text-sm uppercase tracking-wider border-b border-purple-100 pb-2">Custom Fields</h3>
-            {getCustomFields().length === 0 && <p className="text-[10px] text-slate-400 italic">No custom columns added.</p>}
-            {getCustomFields().map(col => (
-              <InputField key={col.id} label={col.label} value={formData[col.id] || ''} onChange={v => setFormData({...formData, [col.id]: v})} />
-            ))}
+            <h3 className="font-bold text-blue-600 text-[10px] uppercase tracking-widest border-b pb-2">Pricing & Color</h3>
+            <InputField label="Color" value={formData.color} onChange={v => setFormData({...formData, color: v})} />
+            <InputField label="Option/Trim" value={formData.optionType} onChange={v => setFormData({...formData, optionType: v})} />
+            <InputField label="Price (AMD)" value={formData.price} onChange={v => setFormData({...formData, price: v})} />
+            <div className="pt-4">
+                <h3 className="font-bold text-purple-600 text-[10px] uppercase tracking-widest border-b pb-2 mb-4">Customer Details</h3>
+                <InputField label="Buyer" value={formData.buyer} onChange={v => setFormData({...formData, buyer: v})} />
+                <InputField label="Phone" value={formData.phone} onChange={v => setFormData({...formData, phone: v})} />
+            </div>
           </div>
         </div>
 
         <div className="mt-10 flex gap-4">
-          <button 
-            onClick={() => onSave(formData)}
-            className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
-          >
+          <button onClick={() => onSave(formData)} className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all">
             <Save size={20} /> Save Changes
           </button>
-          <button onClick={onClose} className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200">Cancel</button>
+          <button onClick={onClose} className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold">Cancel</button>
         </div>
       </div>
     </div>
   );
 };
 
-const InputField = ({ label, value, onChange, type = "text" }) => (
+const InputField = ({ label, value, onChange }) => (
   <div>
     <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">{label}</label>
-    <input 
-      type={type}
-      className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-    />
+    <input className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" value={value} onChange={e => onChange(e.target.value)} />
   </div>
 );
 
@@ -405,155 +294,81 @@ const App = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'orderNo', direction: 'asc' });
   const [columns, setColumns] = useState(COLUMN_DEFINITIONS);
 
-  // --- Logic ---
-  const toggleColumn = (id) => {
-    setColumns(prev => prev.map(col => 
-      col.id === id ? { ...col, visible: !col.visible } : col
-    ));
-  };
-
-  const renameColumn = (id, newLabel) => {
-    setColumns(prev => prev.map(col => 
-      col.id === id ? { ...col, label: newLabel } : col
-    ));
-  };
-
+  const toggleColumn = (id) => setColumns(prev => prev.map(col => col.id === id ? { ...col, visible: !col.visible } : col));
+  const renameColumn = (id, newLabel) => setColumns(prev => prev.map(col => col.id === id ? { ...col, label: newLabel } : col));
   const addColumn = (label) => {
     const id = label.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
     setColumns(prev => [...prev, { id, label, visible: true, isFixed: false }]);
   };
-
-  const deleteColumn = (id) => {
-    if (confirm(`Delete column "${columns.find(c => c.id === id)?.label}"?`)) {
-      setColumns(prev => prev.filter(col => col.id !== id));
-    }
-  };
+  const deleteColumn = (id) => setColumns(prev => prev.filter(col => col.id !== id));
 
   const handleSort = (key) => {
     let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
+    if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
     setSortConfig({ key, direction });
   };
 
-  const sortedAndFilteredData = useMemo(() => {
-    let data = [...inventory].filter(item => 
-      Object.values(item).some(val => 
-        String(val).toLowerCase().includes(search.toLowerCase())
-      )
-    );
-
-    if (sortConfig.key) {
-      data.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-    return data;
+  const filteredData = useMemo(() => {
+    return inventory.filter(item => 
+      Object.values(item).some(val => String(val).toLowerCase().includes(search.toLowerCase()))
+    ).sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
   }, [inventory, search, sortConfig]);
 
   const handleSave = (data) => {
-    if (editingCar) {
-      setInventory(inventory.map(c => c.id === editingCar.id ? { ...data, id: c.id } : c));
-    } else {
-      setInventory([...inventory, { ...data, id: Date.now() }]);
-    }
+    if (editingCar) setInventory(inventory.map(c => c.id === editingCar.id ? { ...data, id: c.id } : c));
+    else setInventory([...inventory, { ...data, id: Date.now() }]);
     setIsFormOpen(false);
     setEditingCar(null);
   };
 
-  const handleDelete = (id) => {
-    if (confirm("Delete this record permanently?")) {
-      setInventory(inventory.filter(c => c.id !== id));
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 font-sans text-slate-900">
-      
-      {/* Top Action Bar */}
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 font-sans">
       <div className="max-w-[1600px] mx-auto mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
-            <div className="p-2 bg-blue-600 rounded-2xl text-white"><Car size={28}/></div>
-            Inventory Hub
+            <div className="p-2 bg-blue-600 rounded-2xl text-white"><Car size={28}/></div> Inventory
           </h1>
-          <p className="text-slate-500 mt-1">Real-time showroom data & operations</p>
         </div>
-
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Filter anything..." 
-              className="bg-white border border-slate-200 rounded-2xl py-3 pl-12 pr-4 w-64 md:w-80 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <input type="text" placeholder="Search..." className="bg-white border rounded-2xl py-3 pl-12 pr-4 w-64 shadow-sm outline-none focus:ring-2 focus:ring-blue-500" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <button 
-            onClick={() => { setEditingCar(null); setIsFormOpen(true); }}
-            className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:scale-105 transition-transform"
-          >
-            <Plus size={20} /> Add Unit
+          <button onClick={() => { setEditingCar(null); setIsFormOpen(true); }} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg">
+            <Plus size={20} /> New Unit
           </button>
         </div>
       </div>
 
-      {/* Table Container */}
       <div className="max-w-[1600px] mx-auto bg-white rounded-[32px] border border-slate-200 shadow-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-max">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
+              <tr className="bg-slate-50/50 border-b">
                 {columns.filter(c => c.visible).map(col => (
-                  <SortableHeader 
-                    key={col.id}
-                    label={col.label} 
-                    id={col.id} 
-                    config={sortConfig} 
-                    onSort={handleSort} 
-                  />
+                  <th key={col.id} className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-400 cursor-pointer" onClick={() => handleSort(col.id)}>
+                    {col.label} {sortConfig.key === col.id && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </th>
                 ))}
-                <th className="p-4 text-[11px] font-black text-slate-400 uppercase text-center sticky right-0 bg-slate-50/90 backdrop-blur-sm z-10 border-l border-slate-100">Actions</th>
+                <th className="p-4 text-[10px] font-black uppercase text-center text-slate-400">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {sortedAndFilteredData.map((car, idx) => (
-                <tr key={car.id} className={`hover:bg-blue-50/30 transition-colors ${idx % 2 !== 0 ? 'bg-slate-50/20' : ''}`}>
+              {filteredData.map(car => (
+                <tr key={car.id} className="hover:bg-blue-50/30 transition-colors">
                   {columns.filter(c => c.visible).map(col => (
-                    <td key={col.id} className="p-4 text-sm max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
-                      {col.id === 'orderNo' && <span className="font-mono font-bold text-blue-600">{car[col.id]}</span>}
-                      {col.id === 'price' && <span className="font-black text-slate-700">{Number(car[col.id]).toLocaleString()}</span>}
-                      {col.id === 'status' && (
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${car.status === 'Showroom' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                          {car[col.id]}
-                        </span>
-                      )}
-                      {col.id === 'model' && <span className="font-bold">{car[col.id]}</span>}
-                      {col.id === 'vin' && <span className="font-mono text-[10px] text-slate-400">{car[col.id]}</span>}
-                      {!['orderNo', 'price', 'status', 'model', 'vin'].includes(col.id) && (
-                        <span className="text-slate-600">{car[col.id] || '-'}</span>
-                      )}
+                    <td key={col.id} className="p-4 text-sm max-w-[200px] truncate">
+                      {col.id === 'price' ? Number(car[col.id]).toLocaleString() : car[col.id] || '-'}
                     </td>
                   ))}
-                  <td className="p-4 sticky right-0 bg-white/90 backdrop-blur-sm z-10 border-l border-slate-100 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.05)]">
+                  <td className="p-4">
                     <div className="flex justify-center gap-2">
-                      <button 
-                        onClick={() => { setEditingCar(car); setIsFormOpen(true); }}
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(car.id)}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <button onClick={() => { setEditingCar(car); setIsFormOpen(true); }} className="p-2 text-slate-400 hover:text-blue-600"><Edit3 size={16} /></button>
+                      <button onClick={() => setInventory(inventory.filter(c => c.id !== car.id))} className="p-2 text-slate-400 hover:text-red-600"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -561,67 +376,15 @@ const App = () => {
             </tbody>
           </table>
         </div>
-        
-        {sortedAndFilteredData.length === 0 && (
-          <div className="p-20 text-center">
-            <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="text-slate-300" size={32} />
-            </div>
-            <p className="text-slate-500 font-medium">No records match your filters</p>
-          </div>
-        )}
-
-        <div className="bg-slate-50 p-4 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-400">
-          <span>SHOWING {sortedAndFilteredData.length} OF {inventory.length} RECORDS</span>
-          <div className="flex gap-4">
-            <button className="flex items-center gap-1 hover:text-slate-600"><Download size={14}/> EXPORT CSV</button>
-            <button 
-              onClick={() => setIsConfigOpen(true)}
-              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg"
-            >
-              <Settings size={14}/> COLUMNS
-            </button>
-          </div>
+        <div className="bg-slate-50 p-4 flex justify-between items-center text-[10px] font-bold text-slate-400">
+            <span>{filteredData.length} UNITS FOUND</span>
+            <button onClick={() => setIsConfigOpen(true)} className="flex items-center gap-1 text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg"><Settings size={14}/> CONFIGURE COLUMNS</button>
         </div>
       </div>
 
-      {/* Overlays */}
-      <CarForm 
-        isOpen={isFormOpen} 
-        onClose={() => setIsFormOpen(false)} 
-        onSave={handleSave} 
-        columns={columns}
-        initialData={editingCar} 
-      />
-
-      <ColumnConfigModal 
-        isOpen={isConfigOpen}
-        onClose={() => setIsConfigOpen(false)}
-        columns={columns}
-        toggleColumn={toggleColumn}
-        renameColumn={renameColumn}
-        addColumn={addColumn}
-        deleteColumn={deleteColumn}
-      />
+      <CarForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSave={handleSave} columns={columns} initialData={editingCar} />
+      <ColumnConfigModal isOpen={isConfigOpen} onClose={() => setIsConfigOpen(false)} columns={columns} toggleColumn={toggleColumn} renameColumn={renameColumn} addColumn={addColumn} deleteColumn={deleteColumn} />
     </div>
-  );
-};
-
-const SortableHeader = ({ label, id, config, onSort }) => {
-  const isActive = config.key === id;
-  return (
-    <th 
-      className={`p-4 text-[11px] font-black uppercase tracking-wider cursor-pointer transition-colors select-none whitespace-nowrap ${isActive ? 'text-blue-600 bg-blue-50/50' : 'text-slate-400 hover:bg-slate-100'}`}
-      onClick={() => onSort(id)}
-    >
-      <div className="flex items-center gap-2">
-        {label}
-        <div className="flex flex-col opacity-50">
-          <ChevronUp size={10} className={isActive && config.direction === 'asc' ? 'text-blue-600' : ''} />
-          <ChevronDown size={10} className={isActive && config.direction === 'desc' ? 'text-blue-600' : ''} />
-        </div>
-      </div>
-    </th>
   );
 };
 
