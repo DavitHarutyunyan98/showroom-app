@@ -9,14 +9,19 @@ import {
   ShieldCheck, 
   Droplets, 
   Info,
-  DollarSign,
+  Plus,
+  Trash2,
+  Edit3,
+  X,
+  Save,
   TrendingUp,
   Filter,
-  ArrowLeft
+  ArrowLeft,
+  Camera
 } from 'lucide-react';
 
-// --- Mock Data ---
-const CAR_INVENTORY = [
+// --- Initial Mock Data ---
+const INITIAL_INVENTORY = [
   {
     id: 1,
     make: "Mercedes-Benz",
@@ -28,12 +33,9 @@ const CAR_INVENTORY = [
     specs: {
       engine: "3.0L Inline-6 Turbo",
       power: "429 hp",
-      torque: "384 lb-ft",
-      acceleration: "4.8s (0-60)",
-      topSpeed: "130 mph",
       fuel: "Gasoline / Hybrid"
     },
-    options: ["Executive Line", "Night Package", "Burmester 4D Sound"]
+    options: ["Executive Line", "Night Package"]
   },
   {
     id: 2,
@@ -46,167 +48,138 @@ const CAR_INVENTORY = [
     specs: {
       engine: "Dual Electric Motors",
       power: "610 hp",
-      torque: "749 lb-ft",
-      acceleration: "3.6s (0-60)",
-      range: "296 miles",
       fuel: "Electric"
     },
-    options: ["Sport Package", "Bowers & Wilkins Sound", "Sky Lounge Roof"]
-  },
-  {
-    id: 3,
-    make: "Porsche",
-    model: "911 Carrera",
-    year: 2024,
-    price: 114400,
-    status: "In Stock",
-    image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=800",
-    specs: {
-      engine: "3.0L Twin-Turbo Flat-6",
-      power: "379 hp",
-      torque: "331 lb-ft",
-      acceleration: "4.0s (0-60)",
-      topSpeed: "182 mph",
-      fuel: "Gasoline"
-    },
-    options: ["Sport Chrono", "RS Spyder Wheels", "Leather Interior"]
-  },
-  {
-    id: 4,
-    make: "Audi",
-    model: "RS e-tron GT",
-    year: 2025,
-    price: 147100,
-    status: "Showroom Only",
-    image: "https://images.unsplash.com/photo-1614200187524-dc4b892acf16?auto=format&fit=crop&q=80&w=800",
-    specs: {
-      engine: "Dual Electric Motors",
-      power: "637 hp",
-      torque: "612 lb-ft",
-      acceleration: "3.1s (0-60)",
-      range: "249 miles",
-      fuel: "Electric"
-    },
-    options: ["Performance Package", "Carbon Fiber Roof", "Matrix Headlights"]
+    options: ["Sport Package", "Sky Lounge"]
   }
 ];
 
-const LEADS = [
-  { id: 1, name: "Alexander Wright", car: "Mercedes S-Class", stage: "Financing", value: "$125,400" },
-  { id: 2, name: "Elena Petrova", car: "Porsche 911", stage: "Test Drive", value: "$118,000" },
-  { id: 3, name: "Marcus Thorne", car: "BMW iX", stage: "Initial Inquiry", value: "$112,000" }
-];
+// --- Sub-Components ---
 
-// --- Components ---
-
-const GlassCard = ({ children, className = "" }) => (
-  <div className={`bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl shadow-xl ${className}`}>
+const GlassCard = ({ children, className = "", onClick }) => (
+  <div 
+    onClick={onClick}
+    className={`bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl shadow-xl ${className}`}
+  >
     {children}
   </div>
 );
 
-const InventoryCard = ({ car, onClick }) => (
-  <GlassCard className="overflow-hidden mb-4 active:scale-95 transition-transform duration-200 cursor-pointer" onClick={() => onClick(car)}>
-    <div className="relative h-48">
-      <img src={car.image} alt={car.model} className="w-full h-full object-cover" />
-      <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-xs px-3 py-1 rounded-full">
-        {car.status}
-      </div>
-    </div>
-    <div className="p-5">
-      <div className="flex justify-between items-start mb-1">
-        <h3 className="font-bold text-lg text-gray-900">{car.make} {car.model}</h3>
-        <span className="text-blue-600 font-bold">${car.price.toLocaleString()}</span>
-      </div>
-      <div className="flex gap-3 text-gray-500 text-sm">
-        <span className="flex items-center gap-1"><Zap size={14} /> {car.specs.power}</span>
-        <span className="flex items-center gap-1"><Droplets size={14} /> {car.specs.fuel}</span>
-      </div>
-    </div>
-  </GlassCard>
-);
+const CarForm = ({ isOpen, onClose, onSave, initialData = null }) => {
+  const [formData, setFormData] = useState(initialData || {
+    make: '', model: '', year: 2024, price: '', status: 'In Stock',
+    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=800',
+    specs: { engine: '', power: '', fuel: 'Gasoline' },
+    options: []
+  });
 
-const DetailPage = ({ car, onBack }) => {
-  if (!car) return null;
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-50 z-50 overflow-y-auto pb-24">
-      <div className="relative h-80">
-        <img src={car.image} className="w-full h-full object-cover" alt={car.model} />
-        <button 
-          onClick={onBack}
-          className="absolute top-12 left-6 bg-white/90 p-3 rounded-2xl shadow-lg"
-        >
-          <ArrowLeft size={24} />
-        </button>
-      </div>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white w-full max-w-md rounded-t-[40px] sm:rounded-[40px] p-8 overflow-y-auto max-h-[90vh]">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-black">{initialData ? 'Edit Vehicle' : 'Add New Vehicle'}</h2>
+          <button onClick={onClose} className="p-2 bg-slate-100 rounded-full"><X size={20} /></button>
+        </div>
 
-      <div className="px-6 -mt-10 relative">
-        <GlassCard className="p-6">
-          <div className="mb-6">
-            <p className="text-blue-600 font-semibold uppercase tracking-widest text-xs mb-1">{car.year} Release</p>
-            <h1 className="text-3xl font-black text-gray-900">{car.make}</h1>
-            <h2 className="text-xl text-gray-600">{car.model}</h2>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="bg-slate-100 p-4 rounded-2xl">
-              <p className="text-xs text-gray-500 mb-1">Price</p>
-              <p className="text-xl font-bold text-gray-900">${car.price.toLocaleString()}</p>
-            </div>
-            <div className="bg-slate-100 p-4 rounded-2xl">
-              <p className="text-xs text-gray-500 mb-1">Status</p>
-              <p className="text-xl font-bold text-green-600">{car.status}</p>
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <Info size={20} className="text-blue-500" /> Technical Characteristics
-            </h4>
-            <div className="space-y-4">
-              {car.specs && Object.entries(car.specs).map(([key, value]) => (
-                <div key={key} className="flex justify-between border-b border-gray-100 pb-2">
-                  <span className="text-gray-500 capitalize">{key}</span>
-                  <span className="font-medium text-gray-900">{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
+        <div className="space-y-4">
           <div>
-            <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <ShieldCheck size={20} className="text-blue-500" /> Included Options
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {car.options && car.options.map(opt => (
-                <span key={opt} className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-sm font-medium">
-                  {opt}
-                </span>
-              ))}
+            <label className="text-xs font-bold text-gray-500 uppercase ml-1">Make</label>
+            <input 
+              className="w-full bg-slate-50 p-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500"
+              value={formData.make}
+              onChange={e => setFormData({...formData, make: e.target.value})}
+              placeholder="e.g. Porsche"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase ml-1">Model</label>
+            <input 
+              className="w-full bg-slate-50 p-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500"
+              value={formData.model}
+              onChange={e => setFormData({...formData, model: e.target.value})}
+              placeholder="e.g. 911 GT3"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase ml-1">Price ($)</label>
+              <input 
+                type="number"
+                className="w-full bg-slate-50 p-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500"
+                value={formData.price}
+                onChange={e => setFormData({...formData, price: parseInt(e.target.value)})}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase ml-1">Status</label>
+              <select 
+                className="w-full bg-slate-50 p-4 rounded-2xl border-none focus:ring-2 focus:ring-blue-500"
+                value={formData.status}
+                onChange={e => setFormData({...formData, status: e.target.value})}
+              >
+                <option>In Stock</option>
+                <option>Reserved</option>
+                <option>Sold</option>
+              </select>
             </div>
           </div>
-
-          <button className="w-full bg-black text-white py-5 rounded-3xl mt-8 font-bold text-lg shadow-xl shadow-black/20 active:scale-95 transition-transform">
-            Start Sales Quote
-          </button>
-        </GlassCard>
+          
+          <div className="pt-4">
+             <button 
+              onClick={() => onSave(formData)}
+              className="w-full bg-blue-600 text-white py-5 rounded-3xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+             >
+              <Save size={20} /> Save Vehicle
+             </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
+// --- Main App ---
+
 const App = () => {
   const [activeTab, setActiveTab] = useState('inventory');
+  const [inventory, setInventory] = useState(INITIAL_INVENTORY);
   const [search, setSearch] = useState('');
   const [selectedCar, setSelectedCar] = useState(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingCar, setEditingCar] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const filteredInventory = useMemo(() => {
-    return CAR_INVENTORY.filter(car => 
+    return inventory.filter(car => 
       car.make.toLowerCase().includes(search.toLowerCase()) || 
       car.model.toLowerCase().includes(search.toLowerCase())
     );
-  }, [search]);
+  }, [search, inventory]);
+
+  const handleSaveCar = (carData) => {
+    if (editingCar) {
+      setInventory(inventory.map(c => c.id === editingCar.id ? { ...carData, id: c.id } : c));
+    } else {
+      setInventory([...inventory, { ...carData, id: Date.now() }]);
+    }
+    setIsFormOpen(false);
+    setEditingCar(null);
+  };
+
+  const handleDelete = (id, e) => {
+    e.stopPropagation();
+    if(confirm("Are you sure you want to delete this vehicle?")) {
+      setInventory(inventory.filter(c => c.id !== id));
+    }
+  };
+
+  const handleEdit = (car, e) => {
+    e.stopPropagation();
+    setEditingCar(car);
+    setIsFormOpen(true);
+  };
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-slate-50 font-sans text-slate-900 relative">
@@ -216,113 +189,158 @@ const App = () => {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-black text-gray-900">Showroom Elite</h1>
-            <p className="text-gray-500 text-sm">Welcome back, Manager</p>
+            <p className="text-gray-500 text-sm">Inventory Manager</p>
           </div>
-          <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md">
-            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="avatar" />
-          </div>
+          <button 
+            onClick={() => setIsEditMode(!isEditMode)}
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-colors ${isEditMode ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-600'}`}
+          >
+            {isEditMode ? 'EXIT EDIT' : 'MANAGE'}
+          </button>
         </div>
 
         {activeTab === 'inventory' && (
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input 
-              type="text" 
-              placeholder="Search make or model..." 
-              className="w-full bg-white rounded-2xl py-4 pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Search inventory..." 
+                className="w-full bg-white rounded-2xl py-3 pl-11 pr-4 shadow-sm focus:outline-none"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            {isEditMode && (
+              <button 
+                onClick={() => { setEditingCar(null); setIsFormOpen(true); }}
+                className="bg-blue-600 text-white p-3 rounded-2xl shadow-lg shadow-blue-200"
+              >
+                <Plus size={24} />
+              </button>
+            )}
           </div>
         )}
       </header>
 
-      {/* Content Area */}
+      {/* Main Content */}
       <main className="px-6 pb-32">
         {activeTab === 'inventory' && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold text-xl">Current Inventory</h2>
-              <button className="text-blue-600 flex items-center gap-1 text-sm font-bold">
-                <Filter size={16} /> Filter
-              </button>
-            </div>
-            {filteredInventory.map(car => (
-              <InventoryCard key={car.id} car={car} onClick={setSelectedCar} />
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'leads' && (
           <div className="space-y-4">
-            <h2 className="font-bold text-xl mb-4">Sales Pipeline</h2>
-            {LEADS.map(lead => (
-              <GlassCard key={lead.id} className="p-5 flex justify-between items-center">
-                <div>
-                  <h4 className="font-bold text-gray-900">{lead.name}</h4>
-                  <p className="text-sm text-gray-500">{lead.car} • {lead.value}</p>
+            {filteredInventory.length === 0 && (
+              <div className="text-center py-20 text-gray-400">
+                <Car size={48} className="mx-auto mb-4 opacity-20" />
+                <p>No vehicles found.</p>
+              </div>
+            )}
+            {filteredInventory.map(car => (
+              <GlassCard 
+                key={car.id} 
+                className="overflow-hidden relative group cursor-pointer"
+                onClick={() => !isEditMode && setSelectedCar(car)}
+              >
+                <div className="h-40 relative">
+                  <img src={car.image} alt={car.model} className="w-full h-full object-cover" />
+                  <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-bold text-white backdrop-blur-md ${car.status === 'Sold' ? 'bg-red-500/80' : 'bg-black/60'}`}>
+                    {car.status.toUpperCase()}
+                  </div>
+                  
+                  {isEditMode && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={(e) => handleEdit(car, e)}
+                        className="bg-white p-3 rounded-full text-blue-600 shadow-xl"
+                      >
+                        <Edit3 size={20} />
+                      </button>
+                      <button 
+                        onClick={(e) => handleDelete(car.id, e)}
+                        className="bg-white p-3 rounded-full text-red-600 shadow-xl"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-md bg-blue-100 text-blue-700 block mb-1">
-                    {lead.stage}
-                  </span>
-                  <ChevronRight size={18} className="text-gray-400 ml-auto" />
+                <div className="p-4 flex justify-between items-end">
+                  <div>
+                    <h3 className="font-bold text-gray-900">{car.make}</h3>
+                    <p className="text-sm text-gray-500">{car.model}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-blue-600 font-black text-lg">${car.price.toLocaleString()}</p>
+                  </div>
                 </div>
               </GlassCard>
             ))}
-            
-            <GlassCard className="p-6 bg-gradient-to-br from-blue-600 to-blue-700 text-white mt-8 border-none">
-              <div className="flex justify-between items-center mb-4">
-                <TrendingUp size={32} />
-                <span className="text-2xl font-black">$355,400</span>
-              </div>
-              <p className="text-blue-100 text-sm">Projected revenue for this month based on active leads.</p>
-            </GlassCard>
           </div>
         )}
 
-        {activeTab === 'settings' && (
-          <div className="space-y-4">
-            <h2 className="font-bold text-xl mb-4">Account Settings</h2>
-            <div className="space-y-2">
-              {['Profile Information', 'Showroom Settings', 'Inventory Sources', 'Staff Access', 'Logout'].map((item) => (
-                <div key={item} className="p-4 bg-white rounded-2xl flex justify-between items-center text-gray-700 active:bg-gray-50">
-                  <span className={item === 'Logout' ? 'text-red-500 font-medium' : 'font-medium'}>{item}</span>
-                  <ChevronRight size={18} className="text-gray-300" />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Placeholder for other tabs */}
+        {activeTab === 'leads' && <div className="text-center py-20 text-gray-400 italic">Leads module live in v2.0</div>}
       </main>
 
-      {/* Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 flex justify-around items-center bg-white/80 backdrop-blur-2xl border-t border-gray-100 pb-8 z-40">
-        <button 
-          onClick={() => setActiveTab('inventory')}
-          className={`flex flex-col items-center gap-1 ${activeTab === 'inventory' ? 'text-blue-600' : 'text-gray-400'}`}
-        >
-          <Car size={24} strokeWidth={activeTab === 'inventory' ? 2.5 : 2} />
-          <span className="text-[10px] font-bold">INVENTORY</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('leads')}
-          className={`flex flex-col items-center gap-1 ${activeTab === 'leads' ? 'text-blue-600' : 'text-gray-400'}`}
-        >
-          <Users size={24} strokeWidth={activeTab === 'leads' ? 2.5 : 2} />
-          <span className="text-[10px] font-bold">LEADS</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('settings')}
-          className={`flex flex-col items-center gap-1 ${activeTab === 'settings' ? 'text-blue-600' : 'text-gray-400'}`}
-        >
-          <Settings size={24} strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
-          <span className="text-[10px] font-bold">SETTINGS</span>
-        </button>
+      {/* Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 flex justify-around items-center bg-white/90 backdrop-blur-xl border-t border-gray-100 pb-8 z-40">
+        {[
+          { id: 'inventory', icon: Car, label: 'STOCK' },
+          { id: 'leads', icon: Users, label: 'LEADS' },
+          { id: 'settings', icon: Settings, label: 'SETUP' }
+        ].map(tab => (
+          <button 
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex flex-col items-center gap-1 transition-colors ${activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'}`}
+          >
+            <tab.icon size={22} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
+            <span className="text-[9px] font-black tracking-tighter uppercase">{tab.label}</span>
+          </button>
+        ))}
       </nav>
 
-      {/* Modal for Details */}
-      {selectedCar && <DetailPage car={selectedCar} onBack={() => setSelectedCar(null)} />}
+      {/* Detail Overlay */}
+      {selectedCar && (
+        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+          <div className="relative h-72">
+            <img src={selectedCar.image} className="w-full h-full object-cover" />
+            <button onClick={() => setSelectedCar(null)} className="absolute top-12 left-6 bg-white p-3 rounded-2xl shadow-xl"><ArrowLeft size={20}/></button>
+          </div>
+          <div className="p-8 -mt-8 bg-white rounded-t-[40px] relative">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h1 className="text-3xl font-black">{selectedCar.make}</h1>
+                <p className="text-xl text-gray-500">{selectedCar.model}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-black text-blue-600">${selectedCar.price.toLocaleString()}</p>
+                <span className="text-xs font-bold text-gray-400">{selectedCar.status}</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-8">
+               <div className="bg-slate-50 p-4 rounded-3xl">
+                  <Zap className="text-blue-500 mb-2" size={20} />
+                  <p className="text-xs text-gray-400">Power</p>
+                  <p className="font-bold">{selectedCar.specs.power}</p>
+               </div>
+               <div className="bg-slate-50 p-4 rounded-3xl">
+                  <Droplets className="text-blue-500 mb-2" size={20} />
+                  <p className="text-xs text-gray-400">Fuel</p>
+                  <p className="font-bold">{selectedCar.specs.fuel}</p>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form Overlay */}
+      <CarForm 
+        isOpen={isFormOpen} 
+        onClose={() => { setIsFormOpen(false); setEditingCar(null); }} 
+        onSave={handleSaveCar}
+        initialData={editingCar}
+      />
+
     </div>
   );
 };
