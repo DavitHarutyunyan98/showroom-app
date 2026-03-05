@@ -207,13 +207,19 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
 
   React.useEffect(() => {
     if (isOpen) {
-      const updatedData = { ...formData };
+      const updatedData = initialData ? { ...initialData } : {
+        orderNo: '', year: 2025, status: 'Showroom', make: 'BMW', model: '',
+        optionType: '', color: '', info: '', price: '', vin: '',
+        buyer: '', manager: '', bank: '', contract: '', phone: '',
+        specs: { power: '', fuel: 'Gasoline' }
+      };
+      
       columns.forEach(col => {
         if (!(col.id in updatedData)) updatedData[col.id] = '';
       });
       setFormData(updatedData);
     }
-  }, [isOpen, columns]);
+  }, [isOpen, columns, initialData]);
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -222,23 +228,49 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target.result;
-      // Simple CSV/Text parser for BMW option sheets
-      // Looks for lines like: 337,M Sport package,˅,
       const lines = text.split('\n');
-      const extractedOptions = lines
-        .map(line => line.split(','))
-        .filter(parts => parts.length >= 2 && parts[0].length >= 2 && parts[0].length <= 4)
-        .map(parts => `${parts[0].trim()}: ${parts[1].replace(/"/g, '').trim()}`)
-        .join('; ');
+      
+      const seenCodes = new Set();
+      const optionsArray = [];
 
-      if (extractedOptions) {
+      lines.forEach(line => {
+        // Handle potential CSV quoting and split
+        const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+        
+        if (parts.length >= 2) {
+          const code = parts[0];
+          const description = parts[1];
+          
+          // BMW/MINI Option Code Pattern: 
+          // Usually 3 alphanumeric characters (e.g. 337, 4UR, KPHF)
+          // or simple numbers for basic equipment (1, 2, 3...)
+          const isAlphaNumeric = /^[a-zA-Z0-9]+$/.test(code);
+          const isValidCode = code.length >= 1 && code.length <= 4 && isAlphaNumeric;
+          
+          if (isValidCode && description && !seenCodes.has(code)) {
+            // Exclude common headers that might look like codes
+            const headers = ['code', 'options', 'model', 'year'];
+            if (!headers.includes(code.toLowerCase())) {
+              seenCodes.add(code);
+              optionsArray.push(`${code}: ${description}`);
+            }
+          }
+        }
+      });
+
+      if (optionsArray.length > 0) {
+        const formattedSpecs = optionsArray.join('\n');
         setFormData(prev => ({
           ...prev,
-          info: prev.info ? `${prev.info} | ${extractedOptions}` : extractedOptions
+          info: prev.info 
+            ? `${prev.info}\n\n--- IMPORTED OPTIONS ---\n${formattedSpecs}` 
+            : `--- IMPORTED OPTIONS ---\n${formattedSpecs}`
         }));
       }
     };
     reader.readAsText(file);
+    // Reset file input so same file can be uploaded again if needed
+    event.target.value = '';
   };
 
   if (!isOpen) return null;
@@ -272,9 +304,9 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
             />
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs hover:bg-emerald-100 transition-colors border border-emerald-100"
+              className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
             >
-              <FileUp size={16} /> Import Specs
+              <FileUp size={18} /> Import Options (.xlsx/csv)
             </button>
             <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"><X size={20} /></button>
           </div>
@@ -301,10 +333,10 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
                   <div key={id} className="relative">
                     <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">{col.label}</label>
                     <textarea 
-                      className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm h-32 resize-none"
+                      className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm h-48 font-mono resize-none leading-relaxed"
                       value={formData[id]}
                       onChange={e => setFormData({...formData, [id]: e.target.value})}
-                      placeholder="Auto-populates when importing specs..."
+                      placeholder="Import options from file to fill this area automatically..."
                     />
                   </div>
                 );
