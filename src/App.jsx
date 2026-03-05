@@ -19,7 +19,8 @@ import {
   Eye,
   EyeOff,
   Check,
-  Type
+  Type,
+  PlusCircle
 } from 'lucide-react';
 
 // --- Enhanced Initial Data to match Spreadsheet ---
@@ -84,10 +85,10 @@ const INITIAL_INVENTORY = [
 ];
 
 const COLUMN_DEFINITIONS = [
-  { id: 'orderNo', label: 'Order #', visible: true },
-  { id: 'year', label: 'Year', visible: true },
+  { id: 'orderNo', label: 'Order #', visible: true, isFixed: true },
+  { id: 'year', label: 'Year', visible: true, isFixed: true },
   { id: 'status', label: 'Status', visible: true },
-  { id: 'model', label: 'Model', visible: true },
+  { id: 'model', label: 'Model', visible: true, isFixed: true },
   { id: 'optionType', label: 'Option', visible: true },
   { id: 'color', label: 'Color', visible: true },
   { id: 'info', label: 'Production Info', visible: true },
@@ -102,9 +103,10 @@ const COLUMN_DEFINITIONS = [
 
 // --- Components ---
 
-const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColumn }) => {
+const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColumn, addColumn, deleteColumn }) => {
   const [editingId, setEditingId] = useState(null);
   const [tempName, setTempName] = useState("");
+  const [newColName, setNewColName] = useState("");
 
   if (!isOpen) return null;
 
@@ -118,14 +120,39 @@ const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColum
     setEditingId(null);
   };
 
+  const handleAdd = () => {
+    if (newColName.trim()) {
+      addColumn(newColName.trim());
+      setNewColName("");
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[110] flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md rounded-[32px] p-8 shadow-2xl">
+      <div className="bg-white w-full max-w-md rounded-[32px] p-8 shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-black">Configure Columns</h2>
           <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200"><X size={18} /></button>
         </div>
-        <div className="grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto pr-2">
+
+        {/* Add New Column Input */}
+        <div className="flex gap-2 mb-6 p-2 bg-blue-50 rounded-2xl border border-blue-100">
+          <input 
+            placeholder="New Column Name..."
+            className="flex-1 bg-white border-none rounded-xl px-4 py-2 text-sm outline-none"
+            value={newColName}
+            onChange={(e) => setNewColName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          />
+          <button 
+            onClick={handleAdd}
+            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={14} /> Add
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-2 space-y-2">
           {columns.map(col => (
             <div 
               key={col.id}
@@ -155,12 +182,22 @@ const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColum
                     </span>
                     {col.visible ? <Eye size={16} className="text-blue-600" /> : <EyeOff size={16} className="text-slate-300" />}
                   </button>
-                  <button 
-                    onClick={() => startEditing(col)}
-                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-colors"
-                  >
-                    <Type size={14} />
-                  </button>
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={() => startEditing(col)}
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-colors"
+                    >
+                      <Type size={14} />
+                    </button>
+                    {!col.isFixed && (
+                      <button 
+                        onClick={() => deleteColumn(col.id)}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-xl transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -168,7 +205,7 @@ const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColum
         </div>
         <button 
           onClick={onClose}
-          className="w-full mt-6 bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-colors"
+          className="w-full mt-6 bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-colors shrink-0"
         >
           Done
         </button>
@@ -177,7 +214,7 @@ const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColum
   );
 };
 
-const CarForm = ({ isOpen, onClose, onSave, initialData = null }) => {
+const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
   const [formData, setFormData] = useState(initialData || {
     orderNo: '', year: 2025, status: 'Showroom', make: 'BMW', model: '',
     optionType: '', color: '', info: '', price: '', vin: '',
@@ -185,40 +222,72 @@ const CarForm = ({ isOpen, onClose, onSave, initialData = null }) => {
     specs: { power: '', fuel: 'Gasoline' }
   });
 
+  // Ensure all current columns exist in formData
+  React.useEffect(() => {
+    if (isOpen) {
+      const updatedData = { ...formData };
+      columns.forEach(col => {
+        if (!(col.id in updatedData)) {
+          updatedData[col.id] = '';
+        }
+      });
+      setFormData(updatedData);
+    }
+  }, [isOpen, columns]);
+
   if (!isOpen) return null;
+
+  // Grouping logic for the form
+  const idGroups = {
+    identity: ['orderNo', 'year', 'model', 'vin'],
+    config: ['optionType', 'color', 'info', 'price'],
+    sales: ['buyer', 'manager', 'bank', 'contract', 'phone']
+  };
+
+  const getCustomFields = () => {
+    const coreIds = [...idGroups.identity, ...idGroups.config, ...idGroups.sales];
+    return columns.filter(col => !coreIds.includes(col.id));
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-5xl rounded-[32px] p-8 overflow-y-auto max-h-[90vh] shadow-2xl">
+      <div className="bg-white w-full max-w-6xl rounded-[32px] p-8 overflow-y-auto max-h-[90vh] shadow-2xl">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-black text-slate-900">{initialData ? 'Edit Record' : 'Add New Entry'}</h2>
           <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"><X size={20} /></button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <h3 className="font-bold text-blue-600 text-sm uppercase tracking-wider border-b border-blue-100 pb-2">Vehicle Identity</h3>
-            <InputField label="Order No" value={formData.orderNo} onChange={v => setFormData({...formData, orderNo: v})} />
-            <InputField label="Year" type="number" value={formData.year} onChange={v => setFormData({...formData, year: v})} />
-            <InputField label="Model" value={formData.model} onChange={v => setFormData({...formData, model: v})} />
-            <InputField label="VIN" value={formData.vin} onChange={v => setFormData({...formData, vin: v})} />
+            <h3 className="font-bold text-blue-600 text-sm uppercase tracking-wider border-b border-blue-100 pb-2">Identity</h3>
+            {idGroups.identity.map(id => {
+              const col = columns.find(c => c.id === id);
+              return col ? <InputField key={id} label={col.label} value={formData[id]} onChange={v => setFormData({...formData, [id]: v})} /> : null;
+            })}
           </div>
           
           <div className="space-y-4">
             <h3 className="font-bold text-blue-600 text-sm uppercase tracking-wider border-b border-blue-100 pb-2">Configuration</h3>
-            <InputField label="Option Type" value={formData.optionType} onChange={v => setFormData({...formData, optionType: v})} />
-            <InputField label="Color" value={formData.color} onChange={v => setFormData({...formData, color: v})} />
-            <InputField label="Production Info" value={formData.info} onChange={v => setFormData({...formData, info: v})} />
-            <InputField label="Last Price" type="number" value={formData.price} onChange={v => setFormData({...formData, price: v})} />
+            {idGroups.config.map(id => {
+              const col = columns.find(c => c.id === id);
+              return col ? <InputField key={id} label={col.label} value={formData[id]} onChange={v => setFormData({...formData, [id]: v})} /> : null;
+            })}
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-bold text-blue-600 text-sm uppercase tracking-wider border-b border-blue-100 pb-2">Customer & Sales</h3>
-            <InputField label="Buyer Name" value={formData.buyer} onChange={v => setFormData({...formData, buyer: v})} />
-            <InputField label="Manager / Date" value={formData.manager} onChange={v => setFormData({...formData, manager: v})} />
-            <InputField label="Bank / ID" value={formData.bank} onChange={v => setFormData({...formData, bank: v})} />
-            <InputField label="Contract" value={formData.contract} onChange={v => setFormData({...formData, contract: v})} />
-            <InputField label="Phone / Email" value={formData.phone} onChange={v => setFormData({...formData, phone: v})} />
+            <h3 className="font-bold text-blue-600 text-sm uppercase tracking-wider border-b border-blue-100 pb-2">Customer</h3>
+            {idGroups.sales.map(id => {
+              const col = columns.find(c => c.id === id);
+              return col ? <InputField key={id} label={col.label} value={formData[id]} onChange={v => setFormData({...formData, [id]: v})} /> : null;
+            })}
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="font-bold text-purple-600 text-sm uppercase tracking-wider border-b border-purple-100 pb-2">Custom Fields</h3>
+            {getCustomFields().length === 0 && <p className="text-[10px] text-slate-400 italic">No custom columns added.</p>}
+            {getCustomFields().map(col => (
+              <InputField key={col.id} label={col.label} value={formData[col.id] || ''} onChange={v => setFormData({...formData, [col.id]: v})} />
+            ))}
           </div>
         </div>
 
@@ -268,6 +337,17 @@ const App = () => {
     setColumns(prev => prev.map(col => 
       col.id === id ? { ...col, label: newLabel } : col
     ));
+  };
+
+  const addColumn = (label) => {
+    const id = label.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
+    setColumns(prev => [...prev, { id, label, visible: true, isFixed: false }]);
+  };
+
+  const deleteColumn = (id) => {
+    if (confirm(`Delete column "${columns.find(c => c.id === id)?.label}"? Data for this column in existing records will be kept in history but not displayed.`)) {
+      setColumns(prev => prev.filter(col => col.id !== id));
+    }
   };
 
   const handleSort = (key) => {
@@ -377,7 +457,7 @@ const App = () => {
                       {col.id === 'model' && <span className="font-bold">{car[col.id]}</span>}
                       {col.id === 'vin' && <span className="font-mono text-[10px] text-slate-400">{car[col.id]}</span>}
                       {!['orderNo', 'price', 'status', 'model', 'vin'].includes(col.id) && (
-                        <span className="text-slate-600">{car[col.id]}</span>
+                        <span className="text-slate-600">{car[col.id] || '-'}</span>
                       )}
                     </td>
                   ))}
@@ -431,6 +511,7 @@ const App = () => {
         isOpen={isFormOpen} 
         onClose={() => setIsFormOpen(false)} 
         onSave={handleSave} 
+        columns={columns}
         initialData={editingCar} 
       />
 
@@ -440,6 +521,8 @@ const App = () => {
         columns={columns}
         toggleColumn={toggleColumn}
         renameColumn={renameColumn}
+        addColumn={addColumn}
+        deleteColumn={deleteColumn}
       />
     </div>
   );
