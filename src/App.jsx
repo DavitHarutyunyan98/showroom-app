@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   Car, 
   Users, 
@@ -20,7 +20,9 @@ import {
   EyeOff,
   Check,
   Type,
-  PlusCircle
+  PlusCircle,
+  FileUp,
+  ClipboardList
 } from 'lucide-react';
 
 // --- Enhanced Initial Data to match Spreadsheet ---
@@ -62,25 +64,6 @@ const INITIAL_INVENTORY = [
     contract: "055 46 49 41",
     phone: "lizalat@hotmail.com",
     specs: { power: "218 hp", fuel: "Gasoline" }
-  },
-  {
-    id: 3,
-    orderNo: "0983870",
-    year: 2025,
-    status: "Showroom",
-    make: "BMW",
-    model: "iX xDrive60",
-    optionType: "MSPP Full",
-    color: "Dune Grey Amido",
-    info: "5. May production 2025",
-    price: 61500000,
-    vin: "WBY51CF05T CV53952",
-    buyer: "Artur",
-    manager: "Ameria Bank",
-    bank: "N 334",
-    contract: "Հայտ 51 2026",
-    phone: "044 93 93 93",
-    specs: { power: "610 hp", fuel: "Electric" }
   }
 ];
 
@@ -135,7 +118,6 @@ const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColum
           <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200"><X size={18} /></button>
         </div>
 
-        {/* Add New Column Input */}
         <div className="flex gap-2 mb-6 p-2 bg-blue-50 rounded-2xl border border-blue-100">
           <input 
             placeholder="New Column Name..."
@@ -215,6 +197,7 @@ const ColumnConfigModal = ({ isOpen, onClose, columns, toggleColumn, renameColum
 };
 
 const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState(initialData || {
     orderNo: '', year: 2025, status: 'Showroom', make: 'BMW', model: '',
     optionType: '', color: '', info: '', price: '', vin: '',
@@ -222,22 +205,44 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
     specs: { power: '', fuel: 'Gasoline' }
   });
 
-  // Ensure all current columns exist in formData
   React.useEffect(() => {
     if (isOpen) {
       const updatedData = { ...formData };
       columns.forEach(col => {
-        if (!(col.id in updatedData)) {
-          updatedData[col.id] = '';
-        }
+        if (!(col.id in updatedData)) updatedData[col.id] = '';
       });
       setFormData(updatedData);
     }
   }, [isOpen, columns]);
 
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      // Simple CSV/Text parser for BMW option sheets
+      // Looks for lines like: 337,M Sport package,˅,
+      const lines = text.split('\n');
+      const extractedOptions = lines
+        .map(line => line.split(','))
+        .filter(parts => parts.length >= 2 && parts[0].length >= 2 && parts[0].length <= 4)
+        .map(parts => `${parts[0].trim()}: ${parts[1].replace(/"/g, '').trim()}`)
+        .join('; ');
+
+      if (extractedOptions) {
+        setFormData(prev => ({
+          ...prev,
+          info: prev.info ? `${prev.info} | ${extractedOptions}` : extractedOptions
+        }));
+      }
+    };
+    reader.readAsText(file);
+  };
+
   if (!isOpen) return null;
 
-  // Grouping logic for the form
   const idGroups = {
     identity: ['orderNo', 'year', 'model', 'vin'],
     config: ['optionType', 'color', 'info', 'price'],
@@ -253,24 +258,58 @@ const CarForm = ({ isOpen, onClose, onSave, columns, initialData = null }) => {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
       <div className="bg-white w-full max-w-6xl rounded-[32px] p-8 overflow-y-auto max-h-[90vh] shadow-2xl">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-black text-slate-900">{initialData ? 'Edit Record' : 'Add New Entry'}</h2>
-          <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"><X size={20} /></button>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900">{initialData ? 'Edit Record' : 'Add New Entry'}</h2>
+            <p className="text-slate-400 text-sm">Fill in details or import options from spec sheet</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept=".csv,.xlsx,.txt" 
+              onChange={handleFileUpload} 
+            />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs hover:bg-emerald-100 transition-colors border border-emerald-100"
+            >
+              <FileUp size={16} /> Import Specs
+            </button>
+            <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"><X size={20} /></button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <h3 className="font-bold text-blue-600 text-sm uppercase tracking-wider border-b border-blue-100 pb-2">Identity</h3>
+            <h3 className="font-bold text-blue-600 text-sm uppercase tracking-wider border-b border-blue-100 pb-2 flex items-center gap-2">
+               Identity
+            </h3>
             {idGroups.identity.map(id => {
               const col = columns.find(c => c.id === id);
               return col ? <InputField key={id} label={col.label} value={formData[id]} onChange={v => setFormData({...formData, [id]: v})} /> : null;
             })}
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-4 md:col-span-1">
             <h3 className="font-bold text-blue-600 text-sm uppercase tracking-wider border-b border-blue-100 pb-2">Configuration</h3>
             {idGroups.config.map(id => {
               const col = columns.find(c => c.id === id);
-              return col ? <InputField key={id} label={col.label} value={formData[id]} onChange={v => setFormData({...formData, [id]: v})} /> : null;
+              if (!col) return null;
+              if (id === 'info') {
+                return (
+                  <div key={id} className="relative">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">{col.label}</label>
+                    <textarea 
+                      className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm h-32 resize-none"
+                      value={formData[id]}
+                      onChange={e => setFormData({...formData, [id]: e.target.value})}
+                      placeholder="Auto-populates when importing specs..."
+                    />
+                  </div>
+                );
+              }
+              return <InputField key={id} label={col.label} value={formData[id]} onChange={v => setFormData({...formData, [id]: v})} />;
             })}
           </div>
 
@@ -345,7 +384,7 @@ const App = () => {
   };
 
   const deleteColumn = (id) => {
-    if (confirm(`Delete column "${columns.find(c => c.id === id)?.label}"? Data for this column in existing records will be kept in history but not displayed.`)) {
+    if (confirm(`Delete column "${columns.find(c => c.id === id)?.label}"?`)) {
       setColumns(prev => prev.filter(col => col.id !== id));
     }
   };
@@ -446,7 +485,7 @@ const App = () => {
               {sortedAndFilteredData.map((car, idx) => (
                 <tr key={car.id} className={`hover:bg-blue-50/30 transition-colors ${idx % 2 !== 0 ? 'bg-slate-50/20' : ''}`}>
                   {columns.filter(c => c.visible).map(col => (
-                    <td key={col.id} className="p-4 text-sm">
+                    <td key={col.id} className="p-4 text-sm max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
                       {col.id === 'orderNo' && <span className="font-mono font-bold text-blue-600">{car[col.id]}</span>}
                       {col.id === 'price' && <span className="font-black text-slate-700">{Number(car[col.id]).toLocaleString()}</span>}
                       {col.id === 'status' && (
